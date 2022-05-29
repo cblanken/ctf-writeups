@@ -62,6 +62,7 @@ Please enter your 8-digit PIN code:
 Incorrect length.
 ```
 
+### Brute-force
 At this point, I decided to try a simple brute-force attack on the PIN, just to see if it was feasible, so I wrote a python script, `pins.py`, to do just that.
 ```python
 # pins.py
@@ -83,14 +84,35 @@ except KeyboardInterrupt:
     sys.exit(0)
 ```
 
-Unfortunately timing just the first 100 PINs, my computer took about 12 seconds.
-If we do a little math we can find out how long it will take for the program to check every PIN. First let's find the number of possible PIN codes. This describes a [permutation](https://en.wikipedia.org/wiki/Permutation) in mathematics. Suffice to say we can calculate the number of possible PINs with this formula 
+`pin.py` output
+```console
+$ time python pins.py
+PIN: 00000000, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+PIN: 00000001, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+PIN: 00000002, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+PIN: 00000003, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+PIN: 00000004, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+PIN: 00000005, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+...
+PIN: 00000095, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+PIN: 00000096, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+PIN: 00000097, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+PIN: 00000098, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+PIN: 00000099, b'Please enter your 8-digit PIN code:\n8\nChecking PIN...\nAccess denied.\n'
+
+real    0m12.780s
+user    0m12.311s
+sys     0m0.435s
+```
+
+Unfortunately timing just the first 100 PINs, my computer took over 12 seconds.
+If we do a little math we can find out the minimum amount of time it might take for the program to check every PIN. First let's find the number of possible PIN codes. This describes a [permutation](https://en.wikipedia.org/wiki/Permutation) in mathematics. Suffice to say we can calculate the number of possible PINs with this formula 
 
 $$
 permutations = \frac{n!} {(n-r)!}
 $$
 
-where $n$ is the number of possible values for each digit, and $r$ is the number digits in our PIN which gives us:
+where $n$ is the number of possible values for each digit, and $r$ is the number of digits in our PIN which gives us:
 
 $$
 permutations = \frac{10!} {(10-8)!} = 10 \times 9 \times 8 \times 7 \times 6 \times 5 \times 4 \times 3 = 1814400
@@ -104,6 +126,7 @@ $$
 
 This is, of course, assuming the time to check each PIN is consistent (we'll find out shortly that's not the case). Regardless this is a good sanity check.
 
+### Timing attack
 Okay, now that we've ruled out a brute-force attempt, let's go back to the title of the challenge, *SideChannel*. Side-channel attacks are essentially observing a process and gleaning information from it based on timing, power consumption, or even sound. They can get very complicated. In our case the only path that really makes sense (particularly for a beginner CTF) is a timing-based attack.
 
 So, let's start by fuzzing `pin_checker` with a few different pins and monitoring the execution time to see where that gets us.
