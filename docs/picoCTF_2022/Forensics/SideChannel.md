@@ -16,7 +16,9 @@
     }
   });
 </script>
-# SideChannel
+
+[HOME](../../index.md)
+# PicoCTF 2022 - SideChannel
 The name itself "SideChannel" seems to indicate a [side-channel attack](https://en.wikipedia.org/wiki/Side-channel_attack), so we should keep that in mind going forward.
 
 To start, we're given a short description
