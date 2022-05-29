@@ -1,5 +1,3 @@
-# picoCTF-2022
-Writeups for picoCTF 2022
+# CTF Writeups
+- [picoCTF 2022](./docs/README.md)
 
-### Forensics
-- [SideChannel](./Forensics/SideChannel.md)
