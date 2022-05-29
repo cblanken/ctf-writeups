@@ -11,15 +11,15 @@ $ file disk.flag.img
 disk.flag.img: DOS/MBR boot sector; partition 1 : ID=0x83, active, start-CHS (0x0,32,33), end-CHS (0xc,223,19), startsector 2048, 204800 sectors; partition 2 : ID=0x82, start-CHS (0xc,223,20), end-CHS (0x19,159,6), startsector 206848, 204800 sectors; partition 3 : ID=0x83, start-CHS (0x19,159,7), end-CHS (0x32,253,11), startsector 411648, 407552 sectors
 ```
 
-Okay at the very least the system recgonizes `disk.flag.img` as a valid image. Let's try to mount the image to see if we can access the files.
+Okay at the very least the system recognizes `disk.flag.img` as a valid image. Let's try to mount the image to see if we can access the files.
 ```console
 $ mkdir ./mnt
 $ sudo mount disk.flag.img ./mnt/
 mount: /home/cameron/notes/ctf/picoCTF_2022/Forensics/OperationOrchid/mnt: wrong fs type, bad option, bad superblock on /dev/loop0, missing codepage or helper program, or other error.
 ```
-Well that didn't work. It's important to know that, while the `mount` command can often automatically detect the filesystem of a device or disk image, but doesn't automatically detect the offset for the image.
+Well that didn't work. It's important to know that, while the `mount` command can often automatically detect the filesystem of a device or disk image, it doesn't automatically detect the offset.
 
-To get some more information about the image, by viewing the partition table with the `mmls` command.
+We can get some more information about the image, by viewing the partition table with the `mmls` command.
 ```console
 $ mmls disk.flag.img
 DOS Partition Table
@@ -38,8 +38,7 @@ Here we have all the information we need to calculate the offset in bytes.
 The `mmls` output lists each section by a count of sectors. So in this case, we can see the first Linux partition starts at sector `2048`. To calculate the offset we just need to multiply the number of sectors by the bytes per sector listed above as 
 > Units are in 512-byte sectors
 
-So, our __offset in bytes__ = 512 x 2048 = 1048576 bytes
-Let's try to mount the image again with the appropriate offset
+So, our __offset__ = 512 x 2048 = 1048576 bytes. Let's try to mount the image again with the appropriate offset.
 ```console
 $ sudo mount -o offset=1048576 disk.flag.img ./mnt/
 
@@ -66,7 +65,7 @@ $ tree ./mnt/
 2 directories, 12 files
 ```
 
-Okay, doesn't look like there is much there. This just seems to be the boot partition.
+Okay, doesn't look like there is much here. This just seems to be the boot partition.
 We can check out the `extlinux.conf`
 ```console
 $ cat extlinux.conf
@@ -85,7 +84,7 @@ LABEL virt
 
 MENU SEPARATOR
 ```
-It looks like this is an Alpine Linux image which is neat but isn't what we need. Let's look at the next partition we saw in the partition table. 
+It looks like this is an Alpine Linux image which is neat but isn't particularly helpful here. Let's look at the next partition we saw in the partition table. 
 
 The 2nd partition started at sector 206848, but it says it's a swap partition which is essentially a file that acts as extra memory to keep your system from crashing if it is using too much RAM. We'll skip this partition for now and look at the last partition which should contain the files for the system this image was pulled from.
 
@@ -117,23 +116,25 @@ $ tree -L 1 ./mnt/
 └── var
 ```
 Nice, that looks like a standard Linux system to me. Let's see if we can find that flag.
-A good first step is to run a `find` search for any files with "flag" in the name since this _is_ a CTF after all.
+A good first step is to search for any files with "flag" in the name since this _is_ a CTF after all. We can do that withe `find` command.
 ```console
 $ sudo find ./mnt/ -iname "*flag*"
 ./mnt/root/flag.txt.enc
 ```
+
 Well that looks promising. Let's check what kind of file that is.
 ```console
 $ sudo file ./mnt/root/flag.txt.enc
 ./mnt/root/flag.txt.enc: openssl enc'd data with salted password
 ```
 
-Let's also check if `flag.txt.enc` shows up in an logs, scripts or other files on the image.
+Let's also check if `flag.txt.enc` shows up in any logs, scripts or other files on the image.
 ```console
 $ sudo grep -r flag.txt.enc ./mnt
 ./mnt/root/.ash_history:openssl aes256 -salt -in flag.txt -out flag.txt.enc -k unbreakablepassword1234567
 ```
-It looks like the `openssl` command was used to encrypt the `flag.txt` with a password of `unbreakablepassword1234567`. This uses the [`openssl-enc`](https://www.openssl.org/docs/man1.1.1/man1/enc.html) function of `openssl`. If we look through the man page, we'll notice that `openssl-enc` has an option to decrypt.
+
+It looks like the `openssl` command was used to encrypt the `flag.txt` with a password of `unbreakablepassword1234567`. The command we saw in `/mnt/root/.ash_history` uses the [`openssl-enc`](https://www.openssl.org/docs/man1.1.1/man1/enc.html) function of `openssl` to encrypt the data. If we look through the man page, we'll notice that `openssl-enc` has an option for decryption.
 ```
 -e  Encrypt the input data: this is the default.
 
@@ -148,8 +149,8 @@ Using -iter or -pbkdf2 would be better.
 bad decrypt
 140027284948288:error:06065064:digital envelope routines:EVP_DecryptFinal_ex:bad decrypt:../crypto/evp/evp_enc.c:610:
 ```
-We got some warnings but, it looks like the command still output a decrypted file `flag.txt`
-Let's see what it says.
+
+We got some warnings, but it looks like the command still output a decrypted file `flag.txt`. Let's see what it says.
 ```
 $ cat flag.txt
 picoCTF{h4un71ng_p457_5113beab}
