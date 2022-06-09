@@ -1,3 +1,3 @@
 # CTF Writeups
-- [picoCTF 2022](./docs/README.md)
+- [Home](https://cblanken.github.io/ctf-writeups/)
 
